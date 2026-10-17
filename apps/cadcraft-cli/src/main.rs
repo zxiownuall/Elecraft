@@ -1,18 +1,18 @@
-//! `cadcraft-cli`: headless CADCraft.
+//! `elecraft-cli`: headless CADCraft.
 //!
 //! ```text
-//! cadcraft-cli info FILE.dxf                       summary as JSON
-//! cadcraft-cli convert IN.dxf OUT.(dxf|svg|png) [--window x0,y0,x1,y1 | --view extents|current]
-//! cadcraft-cli run [FILE|--sample|--metric] [--script TEXT|--script-file F.scr] [--cmd 'id {json}']... [--save OUT] [--export OUT.png] [--window ... | --view ...]
-//! cadcraft-cli commands [FILTER]                   command catalog (JSON)
-//! cadcraft-cli mcp [--connect HOST:PORT [--lazy] [--launch]]  MCP server on stdio (headless or bridged to the app)
-//! cadcraft-cli perf [N]                            timing table on a synthetic N-entity drawing
-//! cadcraft-cli perf FILE                           canvas display-list build of a drawing, zoomed in step by step
-//! cadcraft-cli sample (bracket|floorplan) OUT       write a built-in sample drawing
+//! elecraft-cli info FILE.dxf                       summary as JSON
+//! elecraft-cli convert IN.dxf OUT.(dxf|svg|png) [--window x0,y0,x1,y1 | --view extents|current]
+//! elecraft-cli run [FILE|--sample|--metric] [--script TEXT|--script-file F.scr] [--cmd 'id {json}']... [--save OUT] [--export OUT.png] [--window ... | --view ...]
+//! elecraft-cli commands [FILTER]                   command catalog (JSON)
+//! elecraft-cli mcp [--connect HOST:PORT [--lazy] [--launch]]  MCP server on stdio (headless or bridged to the app)
+//! elecraft-cli perf [N]                            timing table on a synthetic N-entity drawing
+//! elecraft-cli perf FILE                           canvas display-list build of a drawing, zoomed in step by step
+//! elecraft-cli sample (bracket|floorplan) OUT       write a built-in sample drawing
 //! ```
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-/// `println!` that doesn't panic when stdout is closed (`cadcraft-cli commands | head`) with
+/// `println!` that doesn't panic when stdout is closed (`elecraft-cli commands | head`) with
 /// "failed printing to stdout: Broken pipe (os error 32)". Once stdout has failed, later output is
 /// dropped and the work goes on: see `stdout_failed`.
 macro_rules! outln {
@@ -44,26 +44,26 @@ fn stdout_gone() -> bool {
 }
 
 /// stdout went away. The program doesn't stop there: the rest of `run` (later `--cmd` results,
-/// `--save`, `--export`) still happens, so `cadcraft-cli run … --save out.dxf | head` keeps the
+/// `--save`, `--export`) still happens, so `elecraft-cli run … --save out.dxf | head` keeps the
 /// drawing. A reader that stopped early (a closed pipe) is not an error, as in ripgrep; any other
 /// write error is reported and makes the exit status 1.
 fn stdout_failed(e: std::io::Error) {
     if STDOUT_GONE.swap(true, Ordering::Relaxed) || e.kind() == std::io::ErrorKind::BrokenPipe {
         return;
     }
-    eprintln!("cadcraft-cli: can't write to stdout: {e}");
+    eprintln!("elecraft-cli: can't write to stdout: {e}");
     STDOUT_ERROR.store(true, Ordering::Relaxed);
 }
 
 const USAGE: &str = "usage:
-  cadcraft-cli info FILE.dxf
-  cadcraft-cli convert IN.dxf OUT.(dxf|dwg|svg|png|pdf) [FRAMING]
-  cadcraft-cli run [FILE | --sample | --metric] [--script TEXT] [--script-file F.scr] [--cmd 'id {json}']... [--save OUT.dxf] [--export OUT.(png|svg|pdf)] [FRAMING]
-  cadcraft-cli commands [FILTER]
-  cadcraft-cli mcp [--connect HOST:PORT [--lazy] [--launch]]
-  cadcraft-cli perf [N | FILE]
-  cadcraft-cli sample (bracket|floorplan) OUT.(dxf|dwg|svg|png)
-  cadcraft-cli --version
+  elecraft-cli info FILE.dxf
+  elecraft-cli convert IN.dxf OUT.(dxf|dwg|svg|png|pdf) [FRAMING]
+  elecraft-cli run [FILE | --sample | --metric] [--script TEXT] [--script-file F.scr] [--cmd 'id {json}']... [--save OUT.dxf] [--export OUT.(png|svg|pdf)] [FRAMING]
+  elecraft-cli commands [FILTER]
+  elecraft-cli mcp [--connect HOST:PORT [--lazy] [--launch]]
+  elecraft-cli perf [N | FILE]
+  elecraft-cli sample (bracket|floorplan) OUT.(dxf|dwg|svg|png)
+  elecraft-cli --version
 
 image framing (png 2400x1600, svg, pdf; always model space):
   default                  convert: fit the drawing extents.
@@ -538,7 +538,7 @@ fn perf(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// The backend `cadcraft-cli mcp` serves from.
+/// The backend `elecraft-cli mcp` serves from.
 #[derive(Debug, PartialEq, Eq)]
 enum McpTarget {
     /// An in-process drawing session (no `--connect`).
@@ -585,7 +585,7 @@ fn mcp(args: &[String]) -> Result<(), String> {
         McpTarget::Connect { addr, lazy: true, launch } => Box::new(cadcraft_mcp::Remote::lazy(&addr, launch)),
         McpTarget::Connect { addr, .. } => match cadcraft_mcp::Remote::connect(&addr) {
             Ok(r) => Box::new(r),
-            Err(e) => return Err(format!("cadcraft-cli: cannot connect to {addr}: {e}")),
+            Err(e) => return Err(format!("elecraft-cli: cannot connect to {addr}: {e}")),
         },
         McpTarget::Headless => Box::new(cadcraft_mcp::Headless::default()),
     };
@@ -663,7 +663,7 @@ fn cli() -> ExitCode {
         }),
         Some("mcp") => mcp(&rest),
         Some("--version" | "-V") => {
-            outln!("cadcraft-cli {}", env!("CARGO_PKG_VERSION"));
+            outln!("elecraft-cli {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         _ => Err(USAGE.into()),
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn run_export_honours_zoom() {
-        let dir = std::env::temp_dir().join(format!("cadcraft-cli-165-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("elecraft-cli-165-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = |n: &str| dir.join(n).to_string_lossy().to_string();
         let run_svg = |extra: &[&str], out: &str| -> String {

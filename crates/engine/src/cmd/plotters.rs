@@ -1,11 +1,11 @@
 //! Plotter configurations: PLOTTERMANAGER / -PLOTTERMANAGER, and the device and paper a page
 //! setup or a plot uses.
 //!
-//! The built-in devices (`CADCraft PDF`, `CADCraft PNG`, `CADCraft SVG`) come first. They offer
+//! The built-in devices (`Elecraft PDF`, `Elecraft PNG`, `Elecraft SVG`) come first. They offer
 //! the standard ISO and ANSI/ARCH paper sizes with 5 mm (ISO) or quarter-inch (inch sizes)
 //! margins. User devices are `*.plotter.json` files ([`cadcraft_doc::PlotterConfig`],
 //! `docs/plotters.md`) in a folder the host provides through [`set_plotter_store`]. Without
-//! one, native builds use the `plotters` folder of the CADCraft settings directory and the web
+//! one, native builds use the `plotters` folder of the Elecraft settings directory and the web
 //! keeps them for the session.
 
 use std::sync::{Mutex, OnceLock};
@@ -60,20 +60,20 @@ impl PlotterStore {
         }
     }
 
-    /// The `plotters` folder of the CADCraft settings directory (`CADCRAFT_CONFIG_DIR`, else
+    /// The `plotters` folder of the Elecraft settings directory (`ELECRAFT_CONFIG_DIR`, else
     /// the platform's settings directory).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn settings_folder() -> PlotterStore {
         fn dir() -> std::result::Result<std::path::PathBuf, String> {
             use std::path::PathBuf;
             let get = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
-            let root = match std::env::var_os("CADCRAFT_CONFIG_DIR") {
+            let root = match std::env::var_os("ELECRAFT_CONFIG_DIR") {
                 Some(r) if !r.is_empty() => Some(PathBuf::from(r)),
                 Some(_) => None,
                 None => match std::env::consts::OS {
-                    "macos" => get("HOME").map(|h| h.join("Library/Application Support/CADCraft")),
-                    "windows" => get("APPDATA").map(|r| r.join("CADCraft")),
-                    _ => get("XDG_CONFIG_HOME").map(|r| r.join("cadcraft")).or_else(|| get("HOME").map(|h| h.join(".config/cadcraft"))),
+                    "macos" => get("HOME").map(|h| h.join("Library/Application Support/Elecraft")),
+                    "windows" => get("APPDATA").map(|r| r.join("Elecraft")),
+                    _ => get("XDG_CONFIG_HOME").map(|r| r.join("elecraft")).or_else(|| get("HOME").map(|h| h.join(".config/elecraft"))),
                 },
             };
             root.map(|r| r.join("plotters")).ok_or_else(|| "there is no settings folder for plotter configurations".to_string())
@@ -137,9 +137,9 @@ const MAX_DEVICES: usize = 1000;
 
 /// The built-in devices: name, output, description.
 const BUILTIN: [(&str, PlotOutput, &str); 3] = [
-    ("CADCraft PDF", PlotOutput::Pdf, "Vector PDF"),
-    ("CADCraft PNG", PlotOutput::Png, "Raster PNG image"),
-    ("CADCraft SVG", PlotOutput::Svg, "Vector SVG image"),
+    ("Elecraft PDF", PlotOutput::Pdf, "Vector PDF"),
+    ("Elecraft PNG", PlotOutput::Png, "Raster PNG image"),
+    ("Elecraft SVG", PlotOutput::Svg, "Vector SVG image"),
 ];
 
 /// A page setup's "no device" name.
@@ -549,7 +549,7 @@ fn run_plottermanager(_s: &mut Session, p: &Value) -> Result<Value> {
                         Some(o) => o.as_str().and_then(PlotOutput::parse).ok_or_else(|| bad(cmd, "`output` must be pdf, png or svg"))?,
                         None => PlotOutput::Pdf,
                     };
-                    let (b, o, _) = BUILTIN.iter().find(|(_, o, _)| *o == output).copied().unwrap_or(("CADCraft PDF", PlotOutput::Pdf, ""));
+                    let (b, o, _) = BUILTIN.iter().find(|(_, o, _)| *o == output).copied().unwrap_or(("Elecraft PDF", PlotOutput::Pdf, ""));
                     builtin(b, o, "")
                 }
             };

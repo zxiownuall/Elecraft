@@ -2656,7 +2656,7 @@ fn scale_list(w: &mut W, scales: &[(&cadcraft_doc::AnnoScale, String)], dict: &s
 }
 
 fn cadcraft_fonts_name() -> &'static str {
-    "CADCraft Stroke"
+    "Elecraft Stroke"
 }
 
 /// One entity's DXF groups, as the writer stores them, without its `0` group: its type name

@@ -20,14 +20,14 @@ pub struct Workspace {
 }
 
 fn config_dir_from(platform: &str, get: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
-    if let Some(root) = get("CADCRAFT_CONFIG_DIR") {
+    if let Some(root) = get("ELECRAFT_CONFIG_DIR") {
         return (!root.is_empty()).then(|| PathBuf::from(root));
     }
     let nonempty = |key| get(key).filter(|value| !value.is_empty()).map(PathBuf::from);
     match platform {
-        "macos" => nonempty("HOME").map(|home| home.join("Library/Application Support/CADCraft")),
-        "windows" => nonempty("APPDATA").map(|root| root.join("CADCraft")),
-        _ => nonempty("XDG_CONFIG_HOME").map(|root| root.join("cadcraft")).or_else(|| nonempty("HOME").map(|home| home.join(".config/cadcraft"))),
+        "macos" => nonempty("HOME").map(|home| home.join("Library/Application Support/Elecraft")),
+        "windows" => nonempty("APPDATA").map(|root| root.join("Elecraft")),
+        _ => nonempty("XDG_CONFIG_HOME").map(|root| root.join("elecraft")).or_else(|| nonempty("HOME").map(|home| home.join(".config/elecraft"))),
     }
 }
 
@@ -185,17 +185,17 @@ mod tests {
     #[test]
     fn profile_override_isolated_or_explicitly_disabled() {
         let get = |key: &str| match key {
-            "CADCRAFT_CONFIG_DIR" => Some(OsString::from("/private/test-state")),
+            "ELECRAFT_CONFIG_DIR" => Some(OsString::from("/private/test-state")),
             "HOME" | "APPDATA" | "XDG_CONFIG_HOME" => Some(OsString::from("/unrelated-user-profile")),
             _ => None,
         };
         for platform in ["macos", "windows", "linux", "freebsd"] {
             assert_eq!(config_dir_from(platform, get), Some(PathBuf::from("/private/test-state")));
-            assert_eq!(config_dir_from(platform, |key| if key == "CADCRAFT_CONFIG_DIR" { Some(OsString::new()) } else { get(key) }), None);
+            assert_eq!(config_dir_from(platform, |key| if key == "ELECRAFT_CONFIG_DIR" { Some(OsString::new()) } else { get(key) }), None);
         }
         assert_eq!(
             config_dir_from("linux", |key| (key == "XDG_CONFIG_HOME").then(|| OsString::from("/config"))),
-            Some(PathBuf::from("/config/cadcraft"))
+            Some(PathBuf::from("/config/elecraft"))
         );
         assert_eq!(config_dir_from("macos", |_| None), None);
     }

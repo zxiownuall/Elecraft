@@ -1,11 +1,15 @@
 [package]
 name = "cadcraft"
-description = "CADCraft desktop app"
+description = "Elecraft desktop app"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-default-run = "cadcraft"
+default-run = "elecraft"
+
+[[bin]]
+name = "elecraft"
+path = "src/main.rs"
 
 [lints]
 workspace = true
