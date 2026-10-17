@@ -89,6 +89,17 @@ $Stage = Join-Path $TargetDir "windows-package\$Arch"
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 Copy-Item (Join-Path $Bin 'elecraft.exe'), (Join-Path $Bin 'elecraft-cli.exe') $Stage
+foreach ($f in 'README.md', 'NOTICE', 'ATTRIBUTION.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE') {
+  $p = Join-Path $Root $f
+  if (Test-Path $p) { Copy-Item $p $Stage }
+}
+# When external craft-fonts are embedded, stage their individual OFL notices for both outputs.
+if ($env:CRAFT_FONTS_DIR) {
+  foreach ($ofl in Get-ChildItem -Path (Join-Path $env:CRAFT_FONTS_DIR 'fonts\*\OFL.txt') -ErrorAction SilentlyContinue) {
+    Copy-Item $ofl.FullName (Join-Path $Stage "OFL-$($ofl.Directory.Name).txt")
+  }
+}
+$HasFontLicenses = if (Get-ChildItem -Path (Join-Path $Stage 'OFL-*.txt') -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }
 
 & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'elecraft.exe') (Join-Path $Stage 'elecraft-cli.exe')
 
@@ -96,7 +107,7 @@ Copy-Item (Join-Path $Bin 'elecraft.exe'), (Join-Path $Bin 'elecraft-cli.exe') $
 $Msi = Join-Path $Dist "elecraft-$Version-windows-$Arch.msi"
 Invoke-Native 'wix build' {
   wix build (Join-Path $PSScriptRoot 'cadcraft.wxs') -arch $Arch -ext WixToolset.UI.wixext `
-    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\elecraft.ico')" `
+    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\elecraft.ico')" -d "HasFontLicenses=$HasFontLicenses" `
     -o $Msi
 }
 # wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
@@ -109,15 +120,10 @@ Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
 foreach ($f in 'README.md', 'NOTICE', 'ATTRIBUTION.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE') {
-  $p = Join-Path $Root $f
-  if (Test-Path $p) { Copy-Item $p $Portable }
+  if (Test-Path (Join-Path $Stage $f)) { Copy-Item (Join-Path $Stage $f) $Portable }
 }
-# Builds made with craft-fonts (CRAFT_FONTS_DIR) embed its fonts: ship their licences.
-if ($env:CRAFT_FONTS_DIR) {
-  foreach ($ofl in Get-ChildItem -Path (Join-Path $env:CRAFT_FONTS_DIR 'fonts\*\OFL.txt') -ErrorAction SilentlyContinue) {
-    Copy-Item $ofl.FullName (Join-Path $Portable "OFL-$($ofl.Directory.Name).txt")
-  }
-}
+# Builds with craft-fonts carry the same OFL notices in both packages.
+Get-ChildItem -Path (Join-Path $Stage 'OFL-*.txt') -ErrorAction SilentlyContinue | Copy-Item -Destination $Portable
 $Zip = Join-Path $Dist "elecraft-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Portable -DestinationPath $Zip

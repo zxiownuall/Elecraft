@@ -11,7 +11,7 @@ const INIT: &str = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"p
 const CIRCLE: &str = r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"execute","arguments":{"command":"circle","params":{"center":[5,5],"radius":2}}}}"#;
 
 fn mcp(args: &[&str], input: &str) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_cadcraft-cli"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_elecraft-cli"))
         .arg("mcp")
         .args(args)
         .stdin(Stdio::piped())

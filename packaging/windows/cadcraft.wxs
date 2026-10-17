@@ -80,6 +80,26 @@
         <File Id="CadcraftCliExe" Source="$(var.BinDir)\elecraft-cli.exe" KeyPath="yes" />
       </Component>
 
+      <!-- Ship the same checked-in legal documents as the portable archive. -->
+      <Component Id="ReadmeDocument">
+        <File Source="$(var.BinDir)\README.md" KeyPath="yes" />
+      </Component>
+      <Component Id="NoticeDocument">
+        <File Source="$(var.BinDir)\NOTICE" KeyPath="yes" />
+      </Component>
+      <Component Id="AttributionDocument">
+        <File Source="$(var.BinDir)\ATTRIBUTION.md" KeyPath="yes" />
+      </Component>
+      <Component Id="LicenseMitDocument">
+        <File Source="$(var.BinDir)\LICENSE-MIT" KeyPath="yes" />
+      </Component>
+      <Component Id="LicenseApacheDocument">
+        <File Source="$(var.BinDir)\LICENSE-APACHE" KeyPath="yes" />
+      </Component>
+      <?if $(var.HasFontLicenses) = "yes" ?>
+      <Files Include="$(var.BinDir)\OFL-*.txt" />
+      <?endif ?>
+
       <!-- Optional desktop shortcut, removed on uninstall. A non-advertised shortcut needs a registry
            key path, and one in a profile folder (DesktopFolder, even though ALLUSERS=1 makes it the
            Public desktop) must be under HKCU (ICE38, ICE43, ICE57). -->

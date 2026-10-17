@@ -86,6 +86,33 @@ class BrandTests(unittest.TestCase):
         self.assertTrue(any(source.endswith('\\elecraft.exe') for source in sources), sources)
         self.assertTrue(any(source.endswith('\\elecraft-cli.exe') for source in sources), sources)
 
+    def test_cli_integration_tests_resolve_declared_binary(self):
+        manifest = tomllib.loads((ROOT / 'apps/cadcraft-cli/Cargo.toml').read_text())
+        binary = manifest['bin'][0]['name']
+        for name in ('cli.rs', 'mcp_connect.rs', 'drafting_spacing.rs', 'skipped_records.rs'):
+            with self.subTest(name=name):
+                source = (ROOT / 'apps/cadcraft-cli/tests' / name).read_text()
+                self.assertIn(f'env!("CARGO_BIN_EXE_{binary}")', source)
+                self.assertNotIn('CARGO_BIN_EXE_cadcraft-cli', source)
+
+    def test_msi_and_portable_include_legal_documents(self):
+        root_files = {name for name in ('README.md', 'NOTICE', 'ATTRIBUTION.md', 'LICENSE',
+                                         'LICENSE-MIT', 'LICENSE-APACHE') if (ROOT / name).is_file()}
+        ps = (ROOT / 'packaging/windows/package.ps1').read_text()
+        self.assertIn("foreach ($f in 'README.md', 'NOTICE', 'ATTRIBUTION.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE')", ps)
+        tree = ET.parse(ROOT / 'packaging/windows/cadcraft.wxs')
+        ns = {'w': 'http://wixtoolset.org/schemas/v4/wxs'}
+        sources = {node.get('Source', '').split('\\')[-1] for node in tree.findall('.//w:File', ns)}
+        self.assertTrue(root_files <= sources, root_files - sources)
+        self.assertIn('Copy-Item $p $Stage', ps)
+        self.assertIn('Copy-Item (Join-Path $Stage $f) $Portable', ps)
+        # Optional embedded font licenses must follow the same staging path into both artifacts.
+        self.assertIn('Copy-Item $ofl.FullName (Join-Path $Stage', ps)
+        self.assertIn("Get-ChildItem -Path (Join-Path $Stage 'OFL-*.txt')", ps)
+        self.assertIn('HasFontLicenses=', ps)
+        self.assertIn('$(var.HasFontLicenses)', (ROOT / 'packaging/windows/cadcraft.wxs').read_text())
+        self.assertIn('OFL-*.txt', (ROOT / 'packaging/windows/cadcraft.wxs').read_text())
+
     def test_generated_png_and_ico_embed_same_decodable_original_pixels(self):
         png = (ROOT / "assets/app-icon/elecraft-256.png").read_bytes()
         pixels = png_pixels(png)

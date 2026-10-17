@@ -53,3 +53,38 @@ The PNG test decodes and validates signature, IHDR 256×256 RGB, CRCs, zlib pixe
   6. Run `elecraft.exe` in a disposable Windows user profile, inspect window/About title, icon and log/config isolation at `%APPDATA%\Elecraft`, and ensure old settings remain untouched.
 
 Task 2 source work is committed, but a Windows build/UI check is required before claiming a complete rebrand or release readiness.
+
+## Review fix: CLI integration binary and MSI legal payload
+
+- Changed only the `CARGO_BIN_EXE_*` references in four CLI integration test files (five invocations) to the declared `elecraft-cli` binary. Existing test comments and executable error messages were not rebranded.
+- Inspected `cadcraft.wxs`, `package.ps1`, the CLI manifest, and checked-in package inputs. `NOTICE`, `ATTRIBUTION.md`, `LICENSE-MIT`, `LICENSE-APACHE`, and `README.md` exist; plain `LICENSE` does not. The MSI now installs the five present files in `INSTALLFOLDER`, each with a file key path. The portable zip copies those same staged files. When `CRAFT_FONTS_DIR` supplies `OFL.txt` files, staging happens before WiX and a conditional WiX v5 `Files` harvest includes them in the MSI and portable zip.
+
+Regression evidence (new assertions added before implementation):
+
+```text
+RED $ python3 -m unittest discover -s tests -p 'test_brand.py' -v
+Ran 9 tests in 0.703s
+FAILED (failures=5)
+  test_cli_integration_tests_resolve_declared_binary: 4 failing subtests;
+  expected CARGO_BIN_EXE_elecraft-cli, found CARGO_BIN_EXE_cadcraft-cli.
+  test_msi_and_portable_include_legal_documents: missing
+  README.md, NOTICE, ATTRIBUTION.md, LICENSE-MIT, LICENSE-APACHE in WiX File sources.
+
+RED (optional OFL assertion added before that change)
+$ python3 -m unittest discover -s tests -p 'test_brand.py' -k test_msi_and_portable_include_legal_documents -v
+Ran 1 test in 0.002s
+FAILED (failures=1): OFL notices not copied into MSI stage.
+
+GREEN $ python3 -m unittest discover -s tests -p 'test_brand.py' -v
+Ran 9 tests in 0.398s
+OK
+$ python3 -m unittest discover -s tests -v
+Ran 18 tests in 0.268s
+OK
+$ python3 scripts/audit_brand.py
+brand audit: 0 violation(s)
+$ python3 -m py_compile tests/test_brand.py && git diff --check
+(exit 0, no output)
+```
+
+This is source-level XML/package-input coverage, not a WiX build or actual archive inspection. `cargo`, `rustc`, `pwsh`, and `wix` are not installed here, so Rust integration compilation and a Windows packaging build remain unverified. No installer was executed. Font naming/audit policy remains outside this fix.
