@@ -151,6 +151,9 @@ class BrandTests(unittest.TestCase):
             (root / 'crates/mcp/src').mkdir(parents=True)
             (root / 'crates/mcp/src/server.rs').write_text('"cadcraft://drawing"')
             self.assertTrue(any('server.rs' in item for item in audit(root)))
+            (root / 'crates/engine/src').mkdir(parents=True)
+            (root / 'crates/engine/src/sample.rs').write_text('text("CADCRAFT SAMPLE  DWG NO. CC-0001")')
+            self.assertTrue(any('sample.rs' in item for item in audit(root)))
 
     def test_repository_audit_and_attribution(self):
         self.assertEqual(audit(ROOT), [])

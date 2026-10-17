@@ -711,6 +711,20 @@ fn sample_drawing_builds() {
 }
 
 #[test]
+fn sample_title_block_identifies_elecraft() {
+    let drawing = sample::default_sample();
+    let title = drawing
+        .model
+        .iter()
+        .filter_map(|entity| match &entity.kind {
+            EntityKind::Text(text) if text.value.contains("SAMPLE") => Some(text.value.as_str()),
+            _ => None,
+        })
+        .next();
+    assert_eq!(title, Some("ELECRAFT SAMPLE  DWG NO. EC-0001"));
+}
+
+#[test]
 fn count_from_the_menu_shows_its_result() {
     let mut s = Session::new();
     s.cmdline("count").unwrap();

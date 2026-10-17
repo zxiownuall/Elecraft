@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PRODUCT = re.compile(
-    r"CADCraft|ArtCraft|getartcraft\.com|discord\.gg/artcraft|"
+    r"CADCraft|CADCRAFT SAMPLE|ArtCraft|getartcraft\.com|discord\.gg/artcraft|"
     r"ai\.storyteller\.cadcraft|CADCRAFT_CONFIG_DIR|cadcraft://|cadcraft(?:-cli)?\.exe|"
     r"cadcraft(?:-cli)?\s+(?:--version|info|convert|run|commands|mcp|perf|sample)|"
     r"app-icon[/\\]cadcraft|cadcraft-(?:256|macos-512)\.png",
