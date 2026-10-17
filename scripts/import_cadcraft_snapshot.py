@@ -12,6 +12,16 @@ FILES = ('Cargo.toml', 'Cargo.lock', '.gitignore', 'rustfmt.toml',
          'ATTRIBUTION.md', 'docs/control-protocol.md')
 
 
+def _preflight_destination(dest: Path, relative: Path) -> None:
+    target = dest / relative
+    for path in (dest, *(dest / Path(*relative.parts[:i])
+                         for i in range(1, len(relative.parts) + 1))):
+        if path.is_symlink() or (path == target and path.exists()):
+            raise FileExistsError(relative.as_posix())
+        if path != target and path.exists() and not path.is_dir():
+            raise FileExistsError(relative.as_posix())
+
+
 def import_snapshot(source: Path, dest: Path) -> dict:
     source, dest = source.resolve(), dest.resolve()
     if not source.is_dir() or source == dest or source in dest.parents or dest in source.parents:
@@ -19,19 +29,32 @@ def import_snapshot(source: Path, dest: Path) -> dict:
     selected = []
     for name in DIRS:
         root = source / name
-        if not root.is_dir() or (dest / name).exists():
+        if not root.is_dir():
             raise FileExistsError(name)
-        selected.extend(p for p in root.rglob('*') if p.is_file() and '.git' not in p.parts)
+        if any(source.joinpath(*Path(name).parts[:i]).is_symlink()
+               for i in range(1, len(Path(name).parts) + 1)):
+            raise ValueError(f'symlink in source: {name}')
+        _preflight_destination(dest, Path(name))
+        for p in root.rglob('*'):
+            if '.git' in p.relative_to(source).parts:
+                continue
+            if p.is_symlink():
+                raise ValueError(f'symlink in source: {p.relative_to(source)}')
+            if p.is_file():
+                selected.append(p)
     for name in FILES:
         p = source / name
-        if not p.is_file() or (dest / name).exists():
+        if not p.is_file():
             raise FileExistsError(name)
+        _preflight_destination(dest, Path(name))
         selected.append(p)
     for p in selected:  # Preflight before writing any destination file.
         rel = p.relative_to(source)
         parts = [source.joinpath(*rel.parts[:i]) for i in range(1, len(rel.parts) + 1)]
         if any(x.is_symlink() for x in parts):
             raise ValueError(f'symlink in source: {rel}')
+        _preflight_destination(dest, rel)
+    _preflight_destination(dest, Path('docs/provenance/cadcraft-snapshot.json'))
     files = {}
     for p in sorted(selected):
         rel = p.relative_to(source)

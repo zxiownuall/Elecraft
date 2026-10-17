@@ -68,6 +68,54 @@ class ImportSnapshotTests(unittest.TestCase):
             import_snapshot(self.source, self.dest)
         self.assertFalse((self.dest / 'Cargo.toml').exists())
 
+    def test_rejects_dangling_destination_symlink_before_copy(self):
+        link = self.dest / 'Cargo.toml'
+        outside = Path(self.temp.name) / 'outside.toml'
+        link.symlink_to(outside)
+        with self.assertRaises(FileExistsError):
+            import_snapshot(self.source, self.dest)
+        self.assertTrue(link.is_symlink())
+        self.assertFalse(outside.exists())
+        self.assertFalse((self.dest / 'crates').exists())
+
+    def test_rejects_existing_manifest_before_copy(self):
+        manifest = self.dest / 'docs/provenance/cadcraft-snapshot.json'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('keep this manifest', encoding='utf-8')
+        with self.assertRaises(FileExistsError):
+            import_snapshot(self.source, self.dest)
+        self.assertEqual(manifest.read_text(), 'keep this manifest')
+        self.assertFalse((self.dest / 'crates').exists())
+
+    def test_rejects_dangling_manifest_symlink_before_copy(self):
+        manifest = self.dest / 'docs/provenance/cadcraft-snapshot.json'
+        manifest.parent.mkdir(parents=True)
+        outside = Path(self.temp.name) / 'outside.json'
+        manifest.symlink_to(outside)
+        with self.assertRaises(FileExistsError):
+            import_snapshot(self.source, self.dest)
+        self.assertTrue(manifest.is_symlink())
+        self.assertFalse(outside.exists())
+        self.assertFalse((self.dest / 'crates').exists())
+
+    def test_rejects_symlinked_directory_within_selected_root(self):
+        outside = Path(self.temp.name) / 'elsewhere'
+        outside.mkdir()
+        (self.source / 'crates/linked').symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'symlink in source'):
+            import_snapshot(self.source, self.dest)
+        self.assertFalse((self.dest / 'Cargo.toml').exists())
+        self.assertFalse((self.dest / 'crates').exists())
+
+    def test_rejects_symlinked_empty_selected_root(self):
+        (self.source / 'apps').rmdir()
+        outside = Path(self.temp.name) / 'elsewhere'
+        outside.mkdir()
+        (self.source / 'apps').symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'symlink in source'):
+            import_snapshot(self.source, self.dest)
+        self.assertFalse((self.dest / 'Cargo.toml').exists())
+
     def test_refuses_nested_source_and_destination(self):
         with self.assertRaises(ValueError):
             import_snapshot(self.source, self.source / 'nested')
