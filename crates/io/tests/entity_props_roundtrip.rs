@@ -177,6 +177,65 @@ fn builtin_font_name_roundtrips_and_other_readers_get_txt() {
     assert_eq!(r.text_styles.iter().find(|s| s.name == "Standard").map(|s| s.font.as_str()), Some("isocp.shx"));
 }
 
+#[test]
+fn legacy_builtin_font_is_normalized_only_on_dxf_read() {
+    let mut d = Drawing::new_metric();
+    let historic = concat!("CAD", "Craft Stroke");
+    let unrelated = format!("{historic} Extra");
+    let content = format!("{historic} in drawing text");
+    d.text_styles.push(TextStyle { name: "Custom".into(), font: unrelated.clone(), ..TextStyle::default() });
+    d.text_styles.push(TextStyle { name: "FileAlias".into(), font: "romans.shx".into(), ..TextStyle::default() });
+    let h = add(
+        &mut d,
+        0.0,
+        EntityKind::Text(Text {
+            insert: Vec3::ZERO,
+            align_pt: None,
+            height: 2.5,
+            value: content.clone(),
+            rotation: 0.0,
+            width_factor: 1.0,
+            oblique: 0.0,
+            style: "Standard".into(),
+            halign: HAlign::Left,
+            valign: VAlign::Baseline,
+        }),
+    );
+    let current = write_dxf(&d);
+    assert!(current.contains("Elecraft Stroke"));
+    // Old versions stored the built-in name in CADCRAFT FONT xdata next to file `txt`.
+    let legacy = current.replacen("Elecraft Stroke", historic, 1).replacen("  3\r\nromans.shx\r\n", &format!("  3\r\n{historic}\r\n"), 1);
+    assert_ne!(legacy, current);
+    let opened = read_dxf(legacy.as_bytes()).expect("open legacy DXF");
+    let font = |name: &str| opened.text_styles.iter().find(|s| s.name == name).unwrap().font.as_str();
+    assert_eq!(font("Standard"), "Elecraft Stroke");
+    assert_eq!(font("FileAlias"), "Elecraft Stroke");
+    assert_eq!(font("Custom"), unrelated);
+    let rendered = cadcraft_fonts::shape_line(&cadcraft_fonts::TextFont::resolve(font("Standard")), "AB", 2.5, 1.0, 0.0);
+    let expected = cadcraft_fonts::shape_line(&cadcraft_fonts::TextFont::Stroke, "AB", 2.5, 1.0, 0.0);
+    assert!(!rendered.strokes.is_empty());
+    assert_eq!(rendered, expected, "the reopened font renders as the built-in strokes");
+    let EntityKind::Text(text) = &get(&opened, h).kind else { panic!("text lost") };
+    assert_eq!(text.value, content, "drawing content is not branding");
+    let saved = write_dxf(&opened);
+    assert!(
+        !saved.as_bytes().windows(historic.len() + 2).any(|w| w == format!("{historic}\r\n").as_bytes()),
+        "legacy font name must not be emitted as a style font"
+    );
+    assert!(saved.contains("Elecraft Stroke"));
+    assert!(saved.contains(&unrelated));
+    assert!(saved.contains(&content));
+    let reopened = read_dxf(saved.as_bytes()).expect("reopen saved DXF");
+    assert_eq!(reopened.text_styles.iter().find(|s| s.name == "Standard").unwrap().font, "Elecraft Stroke");
+    assert_eq!(reopened.text_styles.iter().find(|s| s.name == "FileAlias").unwrap().font, "Elecraft Stroke");
+
+    // An edited external font filename takes precedence over stale legacy xdata.
+    let edited = legacy.replacen("  3\r\ntxt\r\n", "  3\r\nisocp.shx\r\n", 1);
+    assert_ne!(edited, legacy);
+    let opened = read_dxf(edited.as_bytes()).expect("open externally edited DXF");
+    assert_eq!(opened.text_styles.iter().find(|s| s.name == "Standard").unwrap().font, "isocp.shx");
+}
+
 /// The (code, value) pairs of a DXF text.
 fn groups(text: &str) -> Vec<(i32, String)> {
     let lines: Vec<&str> = text.lines().map(str::trim).collect();

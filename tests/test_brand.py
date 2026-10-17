@@ -168,6 +168,23 @@ class BrandTests(unittest.TestCase):
             credits.write_text('const PRODUCT_LABEL: &str = "Historical CADCraft source data, not Elecraft fork history";\n')
             self.assertEqual(len(audit(root)), 1, 'only the reviewed attribution declaration is exempt')
 
+    def test_audit_allows_only_exact_legacy_dxf_input_alias(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reader = root / 'crates/io/src/dxf_read.rs'
+            writer = root / 'crates/io/src/dxf_write.rs'
+            reader.parent.mkdir(parents=True)
+            alias = '        "CADCraft Stroke" => cadcraft_fonts::BUILTIN_FONT.to_string(),'
+            reader.write_text(alias + '\n')
+            self.assertEqual(audit(root), [], 'only the read-side historic font alias is permitted')
+            reader.write_text(alias + '\n' + 'let title = "CADCraft";\n')
+            self.assertEqual(len(audit(root)), 1, 'unrelated branding in the same file is prohibited')
+            reader.write_text('let title = "CADCraft Stroke";\n')
+            self.assertEqual(len(audit(root)), 1, 'the exact statement, not just the string, is permitted')
+            reader.write_text('')
+            writer.write_text(alias + '\n')
+            self.assertEqual(len(audit(root)), 1, 'the output side may not carry the alias exception')
+
     def test_repository_audit_and_attribution(self):
         self.assertEqual(audit(ROOT), [])
         self.assertIn('ArtCraft Team and the CADCraft contributors', (ROOT / 'NOTICE').read_text())

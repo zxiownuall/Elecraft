@@ -20,7 +20,11 @@ the single-stroke drafting font (`crates/fonts/src/stroke.rs`, now displayed as
 “Elecraft Stroke”), linetypes and hatch patterns (`crates/doc/src/library.rs`),
 the colour palette (`crates/color/src/lib.rs`), and sample drawings
 (`crates/engine/src/sample.rs`). The renamed font is based on the original
-CADCraft Stroke work, not authored anew by the fork.
+CADCraft Stroke work, not authored anew by the fork. Historical drawings using
+that original built-in style name are accepted only at the DXF read boundary;
+the loaded style and subsequent DXF saves use “Elecraft Stroke”. The original
+stroke geometry and its upstream attribution remain unchanged; this is name
+compatibility, not a newly authored font or an imported font asset.
 
 ## Interface translations
 

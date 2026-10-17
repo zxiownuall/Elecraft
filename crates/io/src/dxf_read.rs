@@ -1356,6 +1356,14 @@ fn annotative(tags: &[Tag]) -> bool {
     list.iter().filter(|t| t.code == 1070).nth(1).is_some_and(|t| t.i64() != 0)
 }
 
+/// Canonicalize only the historic built-in style font on the DXF input boundary.
+fn canonical_style_font(name: String) -> String {
+    match name.as_str() {
+        "CADCraft Stroke" => cadcraft_fonts::BUILTIN_FONT.to_string(),
+        _ => name,
+    }
+}
+
 /// A text style's font: CADCraft's own font name from `CADCRAFT` xdata (`1000 FONT`, name)
 /// while the font file is still the `txt` written for other readers; the TrueType family of the
 /// style's `ACAD` xdata (`1000` typeface) when it has no font file (how AutoCAD stores TrueType
@@ -1365,7 +1373,7 @@ fn style_font(tags: &[Tag], file: String) -> String {
         && let Some(face) =
             crate::dxf_ext::xdata(tags, "ACAD").iter().find(|t| t.code == 1000).map(|t| t.str().trim().to_string()).filter(|f| !f.is_empty())
     {
-        return face;
+        return canonical_style_font(face);
     }
     let x = crate::dxf_ext::xdata(tags, crate::dxf_ext::APP);
     let own = x.windows(2).find_map(|w| match w {
@@ -1373,10 +1381,10 @@ fn style_font(tags: &[Tag], file: String) -> String {
         _ => None,
     });
     let stem = file.trim().to_ascii_lowercase();
-    match own {
+    canonical_style_font(match own {
         Some(name) if !name.trim().is_empty() && (stem == "txt" || stem == "txt.shx") => name,
         _ => file,
-    }
+    })
 }
 
 fn tables(tags: &[Tag], d: &mut Drawing, rx: &mut Rx) {

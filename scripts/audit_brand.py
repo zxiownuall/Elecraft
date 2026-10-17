@@ -5,6 +5,8 @@ The ONLY exempt paths are legal attribution: LICENSE-*, NOTICE, ATTRIBUTION.md,
 and docs/provenance/. Internal cadcraft-* crate identifiers are not product names.
 Source-code comments are not distributable strings; Windows resource LegalCopyright
 is an intentionally retained legal attribution, never a product/marketing field.
+The only runtime-source exception is the exact historical built-in font input alias
+in crates/io/src/dxf_read.rs; no output, UI, or whole-file exemption exists.
 """
 from pathlib import Path
 import re
@@ -46,6 +48,11 @@ def audit_brand(root: Path) -> list[str]:
                 '"Historical CADCraft source data, not Elecraft fork history";'
             ):
                 # Exact historical statistics attribution, never a product/marketing identity.
+                continue
+            if path == root / 'crates/io/src/dxf_read.rs' and trimmed == (
+                '"CADCraft Stroke" => cadcraft_fonts::BUILTIN_FONT.to_string(),'
+            ):
+                # Exact historic built-in font input alias; no writer/UI exemption.
                 continue
             if PRODUCT.search(line):
                 violations.append(f"{path.relative_to(root)}:{number}: {line.strip()[:160]}")
