@@ -55,8 +55,7 @@ def audit_brand(root: Path) -> list[str]:
                 # Exact historic built-in font input alias; no writer/UI exemption.
                 continue
             if path == root / 'crates/engine/src/cmd/props.rs' and trimmed == (
-                'if name == "CADCraft Stroke" || '
-                'str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {'
+                'if str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {'
             ):
                 # Exact input rejection before document mutation, not a display/output alias.
                 continue

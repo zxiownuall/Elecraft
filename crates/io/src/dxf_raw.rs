@@ -230,11 +230,16 @@ fn foreign_xdata(kind: &str, tags: &[Tag]) -> Vec<RawTag> {
     let rest = tags.get(start..).unwrap_or(&[]);
     let mut out = Vec::new();
     let mut i = 0;
+    let mut first_acad_seen = false;
     while let Some(first) = rest.get(i) {
         let len = rest.get(i + 1..).map_or(0, |r| r.iter().position(|t| t.code == 1001).unwrap_or(r.len()));
         let chunk = rest.get(i..i + 1 + len).unwrap_or(&[]);
         i += 1 + len;
         let app = up(&first.str());
+        let modeled_acad = app == "ACAD" && !first_acad_seen;
+        if app == "ACAD" {
+            first_acad_seen = true;
+        }
         let own = OWN_APPS.contains(&app.as_str()) || (app == "ACAD" && matches!(kind, "DIMENSION" | "DIMSTYLE"));
         if app.is_empty() || own || out.len() + chunk.len() > MAX_XDATA_GROUPS {
             continue;
@@ -257,7 +262,7 @@ fn foreign_xdata(kind: &str, tags: &[Tag]) -> Vec<RawTag> {
             // With no font file, the first ACAD 1000 is the STYLE typeface. Keep every
             // other group (including later 1000s and other applications) verbatim.
             if kind == "STYLE"
-                && app == "ACAD"
+                && modeled_acad
                 && val(tags, 3).is_none_or(|file| file.trim().is_empty())
                 && let Some(face) = preserved.iter_mut().find(|r| r.code == 1000)
             {

@@ -190,13 +190,15 @@ class BrandTests(unittest.TestCase):
             root = Path(tmp)
             props = root / 'crates/engine/src/cmd/props.rs'
             props.parent.mkdir(parents=True)
-            guard = '    if name == "CADCraft Stroke" || str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {'
+            guard = '    if str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {'
             props.write_text(guard + '\n')
             self.assertEqual(audit(root), [], 'only the explicit input rejection is permitted')
             props.write_text(guard + '\n' + 'let title = "CADCraft Stroke";\n')
             self.assertEqual(len(audit(root)), 1)
             props.write_text('let name = "CADCraft Stroke";\n')
             self.assertEqual(len(audit(root)), 1)
+            props.write_text('if name == "CADCraft Stroke" || ' + guard.strip()[3:] + '\n')
+            self.assertEqual(len(audit(root)), 1, 'old name-rejection guard is not exempt')
             props.write_text('')
             writer = root / 'crates/io/src/dxf_write.rs'
             writer.parent.mkdir(parents=True)

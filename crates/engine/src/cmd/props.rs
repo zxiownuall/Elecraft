@@ -520,7 +520,7 @@ fn run_style(s: &mut Session, p: &Value) -> Result<Value> {
     if name.is_empty() || name.len() > 255 {
         return Err(bad("style", "bad style name"));
     }
-    if name == "CADCraft Stroke" || str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {
+    if str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {
         return Err(bad("style", "historical built-in name is DXF input-only; use Elecraft Stroke"));
     }
     let d = s.doc_mut()?;

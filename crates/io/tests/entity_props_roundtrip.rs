@@ -271,7 +271,20 @@ fn legacy_acad_style_typeface_is_not_reemitted_but_other_xdata_and_text_survive(
     let end = start + 1 + g[start + 1..].iter().position(|(code, _)| *code == 0).expect("next record");
     let file = (start..end).find(|&i| g[i].0 == 3).expect("font file");
     g[file].1.clear();
-    g.splice(end..end, [(1001, "ACAD".into()), (1000, historic.into()), (1070, "42".into()), (1001, "FOREIGN_APP".into()), (1000, historic.into())]);
+    g.splice(
+        end..end,
+        [
+            (1001, "ACAD".into()),
+            (1000, historic.into()),
+            (1070, "42".into()),
+            (1000, historic.into()),
+            (1001, "ACAD".into()),
+            (1000, historic.into()),
+            (1070, "43".into()),
+            (1001, "FOREIGN_APP".into()),
+            (1000, historic.into()),
+        ],
+    );
     let legacy: String = g.iter().map(|(code, value)| format!("{code:>3}\r\n{value}\r\n")).collect();
     let opened = read_dxf(legacy.as_bytes()).expect("read ACAD typeface");
     assert_eq!(opened.text_style("Standard").unwrap().font, "Elecraft Stroke");
@@ -283,6 +296,11 @@ fn legacy_acad_style_typeface_is_not_reemitted_but_other_xdata_and_text_survive(
     let acad = style.iter().position(|p| *p == (1001, "ACAD".into())).expect("ACAD preserved");
     assert_eq!(style[acad + 1], (1000, "Elecraft Stroke".into()));
     assert_eq!(style[acad + 2], (1070, "42".into()));
+    assert_eq!(style[acad + 3], (1000, historic.into()), "later 1000 in modeled run is unrelated");
+    let later_acad =
+        style.iter().enumerate().skip(acad + 1).find(|(_, p)| **p == (1001, "ACAD".into())).map(|(i, _)| i).expect("second ACAD run preserved");
+    assert_eq!(style[later_acad + 1], (1000, historic.into()), "second ACAD run is unrelated to modeled font");
+    assert_eq!(style[later_acad + 2], (1070, "43".into()));
     let foreign = style.iter().position(|p| *p == (1001, "FOREIGN_APP".into())).expect("foreign xdata preserved");
     assert_eq!(style[foreign + 1], (1000, historic.into()), "unrelated xdata is not branding");
     assert!(saved.contains(&content));
