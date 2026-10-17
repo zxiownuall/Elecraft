@@ -1357,7 +1357,7 @@ fn annotative(tags: &[Tag]) -> bool {
 }
 
 /// Canonicalize only the historic built-in style font on the DXF input boundary.
-fn canonical_style_font(name: String) -> String {
+pub(crate) fn canonical_style_font(name: String) -> String {
     match name.as_str() {
         "CADCraft Stroke" => cadcraft_fonts::BUILTIN_FONT.to_string(),
         _ => name,

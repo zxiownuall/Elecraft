@@ -394,6 +394,22 @@ fn text_style_commands() {
 }
 
 #[test]
+fn style_command_rejects_historic_builtin_font_without_changing_document() {
+    let mut s = Session::new();
+    let historic = concat!("CAD", "Craft Stroke");
+    let before = s.execute("style.list", &json!({})).unwrap();
+    let err = s.execute("style", &json!({ "name": "Notes", "font": historic })).unwrap_err();
+    assert!(err.to_string().contains("Elecraft Stroke"), "{err}");
+    assert_eq!(s.execute("style.list", &json!({})).unwrap(), before);
+    let err = s.execute("style", &json!({ "name": historic })).unwrap_err();
+    assert!(err.to_string().contains("Elecraft Stroke"), "{err}");
+    assert_eq!(s.execute("style.list", &json!({})).unwrap(), before);
+    s.execute("style", &json!({ "name": "Notes", "font": format!("{historic} Extra") })).unwrap();
+    assert_eq!(s.doc().unwrap().text_style("Notes").unwrap().font, format!("{historic} Extra"));
+    assert_eq!(s.execute("style.list", &json!({})).unwrap()["styles"][1]["font"], format!("{historic} Extra"));
+}
+
+#[test]
 fn table_create_edit_merge() {
     let mut s = Session::new();
     let t = h(&s

@@ -185,6 +185,24 @@ class BrandTests(unittest.TestCase):
             writer.write_text(alias + '\n')
             self.assertEqual(len(audit(root)), 1, 'the output side may not carry the alias exception')
 
+    def test_audit_allows_only_exact_style_command_rejection_guard(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            props = root / 'crates/engine/src/cmd/props.rs'
+            props.parent.mkdir(parents=True)
+            guard = '    if name == "CADCraft Stroke" || str_param(p, "font").is_some_and(|font| font.trim() == "CADCraft Stroke") {'
+            props.write_text(guard + '\n')
+            self.assertEqual(audit(root), [], 'only the explicit input rejection is permitted')
+            props.write_text(guard + '\n' + 'let title = "CADCraft Stroke";\n')
+            self.assertEqual(len(audit(root)), 1)
+            props.write_text('let name = "CADCraft Stroke";\n')
+            self.assertEqual(len(audit(root)), 1)
+            props.write_text('')
+            writer = root / 'crates/io/src/dxf_write.rs'
+            writer.parent.mkdir(parents=True)
+            writer.write_text(guard + '\n')
+            self.assertEqual(len(audit(root)), 1)
+
     def test_repository_audit_and_attribution(self):
         self.assertEqual(audit(ROOT), [])
         self.assertIn('ArtCraft Team and the CADCraft contributors', (ROOT / 'NOTICE').read_text())

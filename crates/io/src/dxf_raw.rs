@@ -253,7 +253,17 @@ fn foreign_xdata(kind: &str, tags: &[Tag]) -> Vec<RawTag> {
             }
         }
         if ok && depth == 0 {
-            out.extend(chunk.iter().map(raw));
+            let mut preserved: Vec<RawTag> = chunk.iter().map(raw).collect();
+            // With no font file, the first ACAD 1000 is the STYLE typeface. Keep every
+            // other group (including later 1000s and other applications) verbatim.
+            if kind == "STYLE"
+                && app == "ACAD"
+                && val(tags, 3).is_none_or(|file| file.trim().is_empty())
+                && let Some(face) = preserved.iter_mut().find(|r| r.code == 1000)
+            {
+                face.value = crate::dxf_read::canonical_style_font(face.value.clone());
+            }
+            out.extend(preserved);
         }
     }
     out

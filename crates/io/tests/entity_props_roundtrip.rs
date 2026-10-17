@@ -218,10 +218,18 @@ fn legacy_builtin_font_is_normalized_only_on_dxf_read() {
     let EntityKind::Text(text) = &get(&opened, h).kind else { panic!("text lost") };
     assert_eq!(text.value, content, "drawing content is not branding");
     let saved = write_dxf(&opened);
-    assert!(
-        !saved.as_bytes().windows(historic.len() + 2).any(|w| w == format!("{historic}\r\n").as_bytes()),
-        "legacy font name must not be emitted as a style font"
-    );
+    // The old name is legitimate drawing content and part of an unrelated font name.
+    // Inspect exact STYLE font fields, not a broad substring of the serialized drawing.
+    let saved_groups = groups(&saved);
+    let style_fonts: Vec<_> = saved_groups
+        .iter()
+        .enumerate()
+        .filter(|(_, (code, value))| *code == 0 && value == "STYLE")
+        .filter_map(|(start, _)| {
+            saved_groups[start + 1..].iter().take_while(|(code, _)| *code != 0).find(|(code, _)| *code == 3).map(|(_, value)| value.as_str())
+        })
+        .collect();
+    assert!(!style_fonts.contains(&historic), "legacy name must not be a STYLE font file");
     assert!(saved.contains("Elecraft Stroke"));
     assert!(saved.contains(&unrelated));
     assert!(saved.contains(&content));
@@ -234,6 +242,52 @@ fn legacy_builtin_font_is_normalized_only_on_dxf_read() {
     assert_ne!(edited, legacy);
     let opened = read_dxf(edited.as_bytes()).expect("open externally edited DXF");
     assert_eq!(opened.text_styles.iter().find(|s| s.name == "Standard").unwrap().font, "isocp.shx");
+}
+
+#[test]
+fn legacy_acad_style_typeface_is_not_reemitted_but_other_xdata_and_text_survive() {
+    let historic = concat!("CAD", "Craft Stroke");
+    let content = format!("{historic} remains drawing text");
+    let mut d = Drawing::new_metric();
+    d.text_styles.push(TextStyle { name: "Other".into(), font: format!("{historic} Extra"), ..TextStyle::default() });
+    add(
+        &mut d,
+        0.0,
+        EntityKind::Text(Text {
+            insert: Vec3::ZERO,
+            align_pt: None,
+            height: 2.5,
+            value: content.clone(),
+            rotation: 0.0,
+            width_factor: 1.0,
+            oblique: 0.0,
+            style: "Standard".into(),
+            halign: HAlign::Left,
+            valign: VAlign::Baseline,
+        }),
+    );
+    let mut g = groups(&write_dxf(&d));
+    let start = g.windows(2).position(|w| w[0] == (0, "STYLE".into()) && w[1].0 == 5).expect("STYLE record");
+    let end = start + 1 + g[start + 1..].iter().position(|(code, _)| *code == 0).expect("next record");
+    let file = (start..end).find(|&i| g[i].0 == 3).expect("font file");
+    g[file].1.clear();
+    g.splice(end..end, [(1001, "ACAD".into()), (1000, historic.into()), (1070, "42".into()), (1001, "FOREIGN_APP".into()), (1000, historic.into())]);
+    let legacy: String = g.iter().map(|(code, value)| format!("{code:>3}\r\n{value}\r\n")).collect();
+    let opened = read_dxf(legacy.as_bytes()).expect("read ACAD typeface");
+    assert_eq!(opened.text_style("Standard").unwrap().font, "Elecraft Stroke");
+    let saved = write_dxf(&opened);
+    let sg = groups(&saved);
+    let start = sg.iter().position(|p| *p == (0, "STYLE".into())).unwrap();
+    let end = start + 1 + sg[start + 1..].iter().position(|(code, _)| *code == 0).unwrap();
+    let style = &sg[start..end];
+    let acad = style.iter().position(|p| *p == (1001, "ACAD".into())).expect("ACAD preserved");
+    assert_eq!(style[acad + 1], (1000, "Elecraft Stroke".into()));
+    assert_eq!(style[acad + 2], (1070, "42".into()));
+    let foreign = style.iter().position(|p| *p == (1001, "FOREIGN_APP".into())).expect("foreign xdata preserved");
+    assert_eq!(style[foreign + 1], (1000, historic.into()), "unrelated xdata is not branding");
+    assert!(saved.contains(&content));
+    assert!(saved.contains(&format!("{historic} Extra")));
+    assert_eq!(read_dxf(saved.as_bytes()).unwrap().text_style("Standard").unwrap().font, "Elecraft Stroke");
 }
 
 /// The (code, value) pairs of a DXF text.
