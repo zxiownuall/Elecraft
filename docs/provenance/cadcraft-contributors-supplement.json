@@ -1,0 +1,15 @@
+{
+  "recorded_utc": "2026-10-17T17:55:46Z",
+  "scope": "historical CADCraft contributor metadata, not Elecraft fork history",
+  "source_repo": "storytold/cadcraft",
+  "source_path": "/opt/data/agent/cadmatic/cadcraft-main/contributors",
+  "source_head": "86f3199b400c271a1166103519b3785e4ac88e72",
+  "source_head_date": "2026-10-08T13:12:32Z",
+  "source_reported_commits": 26,
+  "imported_after_snapshot": "docs/provenance/cadcraft-snapshot.json (2026-10-17T11:53:29.667245+00:00)",
+  "files": {
+    "contributors/contributors.json": "42b551b5225e7fdb6ee1ab0880d34cbe435b0f92cb065d31c2d3b7e5deef6ce1",
+    "contributors/people.toml": "81daea0ebd2a59e06632dc72210fe17b8e33eef8a4b639971d028bf2f2f9bb87"
+  },
+  "note": "Exact source bytes copied without regenerating statistics or changing opted-in names. The source JSON's head and 26 commits refer to CADCraft history, not Elecraft commits. The original snapshot manifest was not modified; these files were absent from that capture. Windows binaries built for Task 3 predate this supplemental import."
+}
