@@ -41,6 +41,12 @@ def audit_brand(root: Path) -> list[str]:
                 continue
             if path.name == 'build.rs' and '"LegalCopyright"' in line:
                 continue
+            if path == root / 'crates/ui-egui/src/credits.rs' and trimmed == (
+                'const HISTORICAL_SOURCE_LABEL: &str = '
+                '"Historical CADCraft source data, not Elecraft fork history";'
+            ):
+                # Exact historical statistics attribution, never a product/marketing identity.
+                continue
             if PRODUCT.search(line):
                 violations.append(f"{path.relative_to(root)}:{number}: {line.strip()[:160]}")
     return violations

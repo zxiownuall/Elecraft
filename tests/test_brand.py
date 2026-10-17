@@ -155,6 +155,19 @@ class BrandTests(unittest.TestCase):
             (root / 'crates/engine/src/sample.rs').write_text('text("CADCRAFT SAMPLE  DWG NO. CC-0001")')
             self.assertTrue(any('sample.rs' in item for item in audit(root)))
 
+    def test_audit_allows_only_exact_about_history_attribution(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            credits = root / 'crates/ui-egui/src/credits.rs'
+            credits.parent.mkdir(parents=True)
+            provenance = 'const HISTORICAL_SOURCE_LABEL: &str = "Historical CADCraft source data, not Elecraft fork history";'
+            credits.write_text(provenance + '\n')
+            self.assertEqual(audit(root), [])
+            credits.write_text(provenance + '\n' + 'ui.heading("CADCraft is the best CAD app");\n')
+            self.assertEqual(len(audit(root)), 1, 'unrelated UI branding must still be flagged')
+            credits.write_text('const PRODUCT_LABEL: &str = "Historical CADCraft source data, not Elecraft fork history";\n')
+            self.assertEqual(len(audit(root)), 1, 'only the reviewed attribution declaration is exempt')
+
     def test_repository_audit_and_attribution(self):
         self.assertEqual(audit(ROOT), [])
         self.assertIn('ArtCraft Team and the CADCraft contributors', (ROOT / 'NOTICE').read_text())

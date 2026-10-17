@@ -35,6 +35,9 @@ pub struct Model {
 
 include!(concat!(env!("OUT_DIR"), "/credits.rs"));
 
+// The snapshot predates this fork; this provenance label is attribution, not a product identity.
+const HISTORICAL_SOURCE_LABEL: &str = "Historical CADCraft source data, not Elecraft fork history";
+
 /// Which name to show. Display and real names fall back to the `@username` when not given.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum NameMode {
@@ -242,6 +245,7 @@ pub fn contributors_ui(ui: &mut egui::Ui) {
             v.table = true;
         }
     });
+    ui.label(RichText::new(crate::i18n::t(HISTORICAL_SOURCE_LABEL)).small().weak());
     let list = sorted(CONTRIBUTORS, v.names, v.key, v.ascending);
     ui.label(
         RichText::new(crate::tf!(
@@ -308,6 +312,7 @@ fn table(ui: &mut egui::Ui, list: &[&Contributor], v: &mut View) {
 
 /// About ▸ Models: AI models credited in Co-Authored-By trailers.
 pub fn models_ui(ui: &mut egui::Ui) {
+    ui.label(RichText::new(crate::i18n::t(HISTORICAL_SOURCE_LABEL)).small().weak());
     if MODELS.is_empty() {
         ui.label(crate::tl!("No model credits were built into this copy."));
         return;
@@ -370,6 +375,43 @@ mod tests {
 
     fn logins(v: &[&Contributor]) -> Vec<&'static str> {
         v.iter().map(|c| c.login).collect()
+    }
+
+    // Removing the provenance label from either rendered tab must fail this test.
+    #[test]
+    fn about_statistics_identify_historical_source_in_both_tabs() {
+        fn painted_text(shapes: &[egui::epaint::ClippedShape]) -> String {
+            fn collect(shape: &egui::Shape, text: &mut String) {
+                match shape {
+                    egui::Shape::Text(s) => {
+                        text.push_str(s.galley.text());
+                        text.push('\n');
+                    }
+                    egui::Shape::Vec(shapes) => {
+                        for shape in shapes {
+                            collect(shape, text);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            let mut text = String::new();
+            for shape in shapes {
+                collect(&shape.shape, &mut text);
+            }
+            text
+        }
+
+        assert_eq!(crate::i18n::tr("de", HISTORICAL_SOURCE_LABEL), HISTORICAL_SOURCE_LABEL);
+        let input =
+            egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1600.0, 1000.0))), ..Default::default() };
+        for (tab, render) in [("Contributors", contributors_ui as fn(&mut egui::Ui)), ("Models", models_ui)] {
+            let ctx = egui::Context::default();
+            let mut output = ctx.run_ui(input.clone(), render);
+            let text = painted_text(&output.shapes);
+            output.textures_delta.clear();
+            assert!(text.contains("Historical CADCraft source data, not Elecraft fork history"), "{tab}: {text}");
+        }
     }
 
     #[test]
