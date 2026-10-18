@@ -3,7 +3,6 @@
 Elecraft is an independent, Windows-first, open-source 2D CAD editor based on
 attributed open-source code. The public project home is
 [github.com/zxiownuall/Elecraft](https://github.com/zxiownuall/Elecraft).
-It is not affiliated with CADMATIC or the original project's trademarks.
 Original authors and asset contributors remain credited in [NOTICE](NOTICE)
 and [ATTRIBUTION.md](ATTRIBUTION.md); see the [source manifest](docs/provenance/cadcraft-snapshot.json)
 and [upstream refresh audit](docs/elecraft/upstream-audit-2026-10-18.md).
