@@ -60,7 +60,18 @@ class BrandTests(unittest.TestCase):
         self.assertIn('"elecraft.log"', (ROOT / "apps/cadcraft/src/logging.rs").read_text())
         self.assertIn('outln!("elecraft-cli {}', (ROOT / "apps/cadcraft-cli/src/main.rs").read_text())
 
+    def test_web_page_displays_elecraft_identity(self):
+        page = (ROOT / 'apps/cadcraft-web/index.html').read_text()
+        self.assertIn('<title>Elecraft</title>', page)
+        self.assertIn('Loading Elecraft', page)
+        self.assertNotIn('Loading CADCraft', page)
+        startup = (ROOT / 'apps/cadcraft-web/src/main.rs').read_text()
+        self.assertIn('Elecraft failed to start:', startup)
+        self.assertNotIn('CADCraft failed to start:', startup)
+
     def test_packaging_identity_and_original_resource(self):
+        workspace_manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        self.assertEqual(workspace_manifest['workspace']['package']['repository'], 'https://github.com/zxiownuall/Elecraft')
         for package, binary in (('cadcraft', 'elecraft'), ('cadcraft-cli', 'elecraft-cli')):
             manifest = tomllib.loads((ROOT / f'apps/{package}/Cargo.toml').read_text())
             self.assertEqual(manifest['package']['name'], package)
